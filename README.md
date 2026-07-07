@@ -10,6 +10,15 @@ A personal book library — track what you're reading, what's done, and what's o
 
 Every table is scoped per-user (`user_id` + RLS policies), so the app is single-user today but ready for open signup later — see [Going multi-user](#going-multi-user-later) below.
 
+## Status
+
+- [x] Supabase schema + RLS migration applied
+- [x] `.env.local` configured with real project credentials
+- [x] First user account created; signups turned back off
+- [x] Verified end-to-end locally: auth guard, login page, auto-seeded starter library, data persists in Postgres across sessions
+- [x] Pushed to GitHub (`main`, up to date)
+- [ ] **Deploy to Vercel** — not done yet, pick up in the next session (see [Deploy to Vercel](#deploy-to-vercel))
+
 ## 1. Set up Supabase
 
 1. In your Supabase project, open **SQL Editor** and run the migration in [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). This creates the `books` and `categories` tables with RLS policies scoped to `auth.uid()`.
@@ -67,12 +76,13 @@ The schema and RLS policies are already multi-tenant (every row is scoped to `us
 
 If you'd rather share one library across a few invited people instead of giving everyone their own, that needs a small schema change (a shared `library_id` instead of per-row `user_id`) — ask for that when you're ready.
 
-## Deploy to Vercel
+## Deploy to Vercel (pending — next session)
 
-1. Push this repo to GitHub (already set up).
+1. ~~Push this repo to GitHub~~ — done, repo is at `souparnogit19209426/Book-Library`.
 2. Import the repo in [Vercel](https://vercel.com/new).
-3. Add the two environment variables from step 2 above.
-4. Deploy. Vercel will run `next build` automatically on every push to your default branch.
+3. Add the two environment variables from [step 2](#2-configure-environment-variables) above (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in Vercel's Project Settings → Environment Variables.
+4. Deploy. Vercel will run `next build` automatically on every push to `main`.
+5. Once live, add the Vercel domain to Supabase's redirect/allowed-origins settings if prompted (Authentication → URL Configuration).
 
 ## Project structure
 
