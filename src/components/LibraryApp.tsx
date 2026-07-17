@@ -126,6 +126,17 @@ export function LibraryApp({
 
   const activePathBookIds = useMemo(() => new Set(currentPathItems.map((i) => i.bookId)), [currentPathItems]);
 
+  const pathStats = useMemo(() => {
+    const pathBooks = currentPathItems
+      .map((i) => books.find((b) => b.id === i.bookId))
+      .filter((b): b is Book => !!b);
+    return {
+      total: pathBooks.length,
+      done: pathBooks.filter((b) => b.status === "done").length,
+      reading: pathBooks.filter((b) => b.status === "reading").length,
+    };
+  }, [currentPathItems, books]);
+
   const { pageTitle, pageSubtitle } = useMemo(() => {
     if (navFilter === "all") return { pageTitle: "All Books", pageSubtitle: `${filteredBooks.length} books in your library` };
     if (navFilter === "starred") return { pageTitle: "Starred Books", pageSubtitle: `${filteredBooks.length} starred books` };
@@ -354,7 +365,11 @@ export function LibraryApp({
             <div className="mt-1 text-sm text-text-3">{pageSubtitle}</div>
           </div>
 
-          <ProgressSection done={stats.done} reading={stats.reading} total={stats.total} />
+          {activePathId ? (
+            <ProgressSection done={pathStats.done} reading={pathStats.reading} total={pathStats.total} scopeLabel="in this path" />
+          ) : (
+            <ProgressSection done={stats.done} reading={stats.reading} total={stats.total} />
+          )}
 
           {activePathId ? (
             <ReadingPath
