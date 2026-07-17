@@ -16,8 +16,10 @@ Every table is scoped per-user (`user_id` + RLS policies), so the app is single-
 - [x] `.env.local` configured with real project credentials
 - [x] First user account created; signups turned back off
 - [x] Verified end-to-end locally: auth guard, login page, auto-seeded starter library, data persists in Postgres across sessions
+- [x] Real book cover art via Open Library, with live lookup on add + background backfill for existing books
+- [x] Responsive mobile drawer sidebar
 - [x] Pushed to GitHub (`main`, up to date)
-- [ ] **Deploy to Vercel** — not done yet, pick up in the next session (see [Deploy to Vercel](#deploy-to-vercel))
+- [x] **Deployed to Vercel** — live at `book-library-f1lz3twoz-trader-s-diary.vercel.app`
 
 ## 1. Set up Supabase
 
@@ -64,8 +66,10 @@ Visit [http://localhost:3000](http://localhost:3000), sign in, and the app auto-
 - Email/password auth via Supabase, with session refresh handled in `middleware.ts`
 - Full CRUD for books and categories via Next.js Server Actions (`src/app/actions.ts`) — no separate API layer
 - Search, status filters (Unread / Reading / Read / Paused), starred and owned-copy views, category browsing
+- Real book cover art from the [Open Library Covers API](https://openlibrary.org/dev/docs/api/covers) (key-less) — looked up live while adding a book, with a one-time background backfill for existing books missing one; falls back to a category emoji tile when no match is found
 - JSON export/import for backups (replaces your whole library on import, with a confirmation prompt)
 - Row Level Security ensures one user's data is never visible to another, even before you open up signups
+- Responsive layout: sidebar collapses to a slide-in drawer below the `md` breakpoint for phone/tablet use
 
 ## Going multi-user later
 
@@ -76,13 +80,19 @@ The schema and RLS policies are already multi-tenant (every row is scoped to `us
 
 If you'd rather share one library across a few invited people instead of giving everyone their own, that needs a small schema change (a shared `library_id` instead of per-row `user_id`) — ask for that when you're ready.
 
-## Deploy to Vercel (pending — next session)
+## Deploy to Vercel
 
-1. ~~Push this repo to GitHub~~ — done, repo is at `souparnogit19209426/Book-Library`.
+Already deployed — live at `https://book-library-f1lz3twoz-trader-s-diary.vercel.app`. For reference, or to redeploy elsewhere:
+
+1. Push this repo to GitHub — done, repo is at `souparnogit19209426/Book-Library`.
 2. Import the repo in [Vercel](https://vercel.com/new).
 3. Add the two environment variables from [step 2](#2-configure-environment-variables) above (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in Vercel's Project Settings → Environment Variables.
 4. Deploy. Vercel will run `next build` automatically on every push to `main`.
-5. Once live, add the Vercel domain to Supabase's redirect/allowed-origins settings if prompted (Authentication → URL Configuration).
+5. **Check Deployment Protection** (Project Settings → Deployment Protection) is **off** for Production — it's on by default on team accounts and will block every visitor behind a Vercel login wall, which looks like an outage but isn't one. This app already has its own auth (Supabase), so Vercel-level protection is redundant here.
+
+### Known gotcha: Supabase free-tier pausing
+
+The Supabase project pauses after a period of inactivity (free tier). When paused, its subdomain stops resolving (DNS NXDOMAIN) and the app — local or deployed — will show a blank page or fail to sign in. Fix: restore the project from the Supabase dashboard; no code change needed.
 
 ## Project structure
 
@@ -96,11 +106,14 @@ src/
     LibraryApp.tsx        Client component holding all UI state
     Sidebar.tsx, TopBar.tsx, ProgressSection.tsx, StatusTabs.tsx
     BookCard.tsx, AddBookModal.tsx, BookDetailModal.tsx, CategoryModal.tsx
+    CoverThumb.tsx         Shared cover-image renderer with emoji fallback
     Modal.tsx              Generic modal shell
   lib/
     constants.ts          Default categories/books seed data, emoji/color helpers
     types.ts               Book/Category/BookStatus types
+    openLibrary.ts         Open Library cover lookup + image URL helper
     supabase/               Browser/server/middleware Supabase clients + DB types
 supabase/
   migrations/0001_init.sql Schema + RLS policies
+  migrations/0002_add_cover_id.sql Adds books.cover_id
 ```
