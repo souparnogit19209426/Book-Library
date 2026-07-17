@@ -19,7 +19,7 @@ Every table is scoped per-user (`user_id` + RLS policies), so the app is single-
 - [x] Real book cover art via Open Library, with live lookup on add + background backfill for existing books
 - [x] Responsive mobile drawer sidebar
 - [x] Pushed to GitHub (`main`, up to date)
-- [x] **Deployed to Vercel** — live at `book-library-f1lz3twoz-trader-s-diary.vercel.app`
+- [x] **Deployed to Vercel** — live at `book-library-tau-amber.vercel.app`
 
 ## 1. Set up Supabase
 
@@ -82,7 +82,7 @@ If you'd rather share one library across a few invited people instead of giving 
 
 ## Deploy to Vercel
 
-Already deployed — live at `https://book-library-f1lz3twoz-trader-s-diary.vercel.app`. For reference, or to redeploy elsewhere:
+Already deployed — live at `https://book-library-tau-amber.vercel.app`. For reference, or to redeploy elsewhere:
 
 1. Push this repo to GitHub — done, repo is at `souparnogit19209426/Book-Library`.
 2. Import the repo in [Vercel](https://vercel.com/new).
