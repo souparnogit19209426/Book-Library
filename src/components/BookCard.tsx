@@ -1,4 +1,5 @@
-import { STATUS_LABELS, bookColor, catEmoji } from "@/lib/constants";
+import { CoverThumb } from "@/components/CoverThumb";
+import { STATUS_LABELS, bookColor } from "@/lib/constants";
 import type { Book } from "@/lib/types";
 
 const PILL_CLASSES: Record<Book["status"], string> = {
@@ -16,20 +17,18 @@ const DOT_CLASSES: Record<Book["status"], string> = {
 };
 
 export function BookCard({ book, onClick }: { book: Book; onClick: () => void }) {
-  const emoji = catEmoji(book.categoryId);
-
   return (
     <div
       onClick={onClick}
       className="flex cursor-pointer flex-col gap-2.5 rounded-2xl border border-border bg-surface p-4 transition-all hover:-translate-y-px hover:border-border-2 hover:shadow-md"
     >
       <div className="flex h-[100px] items-center justify-center overflow-hidden rounded-md bg-surface-2">
-        <div
-          className="flex h-[88px] w-16 items-center justify-center rounded-[3px] text-[22px] shadow-[2px_2px_8px_rgba(0,0,0,0.12)]"
-          style={{ background: bookColor(book.id) }}
-        >
-          {emoji}
-        </div>
+        <CoverThumb
+          coverId={book.coverId}
+          categoryId={book.categoryId}
+          background={bookColor(book.id)}
+          size="M"
+        />
       </div>
       <div>
         <div className="text-sm font-medium leading-tight text-text-1">{book.title}</div>

@@ -14,6 +14,7 @@ export function Sidebar({
   onOpenCatModal,
   userEmail,
   onSignOut,
+  backfillingCovers = false,
 }: {
   stats: { total: number; done: number; reading: number; unread: number; starred: number; owned: number };
   categories: Category[];
@@ -23,12 +24,19 @@ export function Sidebar({
   onOpenCatModal: () => void;
   userEmail: string;
   onSignOut: () => void;
+  backfillingCovers?: boolean;
 }) {
   return (
     <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
       <div className="border-b border-border px-6 pb-5 pt-7">
         <h1 className="font-serif text-[22px] tracking-[-0.3px] text-text-1">Bibliotheca</h1>
         <p className="mt-0.5 text-xs text-text-3">Personal book library</p>
+        {backfillingCovers && (
+          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-text-4">
+            <span className="spinner" />
+            Fetching cover images…
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-b border-border px-6 py-4">

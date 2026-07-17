@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_CATEGORIES, DEFAULT_BOOKS } from "@/lib/constants";
+import { searchCoverId } from "@/lib/openLibrary";
 import type { Book, BookStatus, Category, LibraryExport } from "@/lib/types";
 import { redirect } from "next/navigation";
 
@@ -33,6 +34,7 @@ function rowToBook(row: {
   star: boolean;
   owned: boolean;
   note: string;
+  cover_id: number | null;
 }): Book {
   return {
     id: row.id,
@@ -43,6 +45,7 @@ function rowToBook(row: {
     star: row.star,
     owned: row.owned,
     note: row.note,
+    coverId: row.cover_id,
   };
 }
 
@@ -96,6 +99,7 @@ export async function addBookAction(input: {
   star: boolean;
   owned: boolean;
   note: string;
+  coverId?: number | null;
 }): Promise<ActionResult<Book>> {
   try {
     const { supabase, userId } = await requireUser();
@@ -110,6 +114,7 @@ export async function addBookAction(input: {
         star: input.star,
         owned: input.owned,
         note: input.note,
+        cover_id: input.coverId ?? null,
       })
       .select()
       .single();
@@ -117,6 +122,60 @@ export async function addBookAction(input: {
     return ok(rowToBook(data));
   } catch (err) {
     return fail(err, "Failed to add book");
+  }
+}
+
+export async function lookupBookCoverAction(
+  title: string,
+  author: string,
+): Promise<ActionResult<{ coverId: number | null }>> {
+  try {
+    await requireUser();
+    const coverId = await searchCoverId(title, author);
+    return ok({ coverId });
+  } catch (err) {
+    return fail(err, "Failed to look up cover");
+  }
+}
+
+export async function backfillCoversAction(): Promise<ActionResult<{ books: Book[] }>> {
+  try {
+    const { supabase, userId } = await requireUser();
+
+    const { data: missing, error } = await supabase
+      .from("books")
+      .select()
+      .eq("user_id", userId)
+      .is("cover_id", null);
+    if (error) throw error;
+    if (!missing || missing.length === 0) return ok({ books: [] });
+
+    const BATCH_SIZE = 5;
+    const updated: Book[] = [];
+
+    for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+      const batch = missing.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (row) => {
+          const coverId = await searchCoverId(row.title, row.author);
+          if (coverId == null) return null;
+          const { data, error: updateError } = await supabase
+            .from("books")
+            .update({ cover_id: coverId })
+            .eq("id", row.id)
+            .eq("user_id", userId)
+            .select()
+            .single();
+          if (updateError || !data) return null;
+          return rowToBook(data);
+        }),
+      );
+      updated.push(...results.filter((b): b is Book => b !== null));
+    }
+
+    return ok({ books: updated });
+  } catch (err) {
+    return fail(err, "Failed to fetch cover images");
   }
 }
 

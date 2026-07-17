@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { lookupBookCoverAction } from "@/app/actions";
+import { CoverThumb } from "@/components/CoverThumb";
 import { Modal } from "@/components/Modal";
-import { STATUS_LABELS, STATUSES } from "@/lib/constants";
+import { STATUS_LABELS, STATUSES, bookColor } from "@/lib/constants";
 import type { BookStatus, Category } from "@/lib/types";
 
 export interface NewBookInput {
@@ -13,6 +15,7 @@ export interface NewBookInput {
   star: boolean;
   owned: boolean;
   note: string;
+  coverId: number | null;
 }
 
 export function AddBookModal({
@@ -35,6 +38,9 @@ export function AddBookModal({
   const [owned, setOwned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [coverId, setCoverId] = useState<number | null>(null);
+  const [coverStatus, setCoverStatus] = useState<"idle" | "loading" | "found" | "none">("idle");
+  const coverRequestId = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -46,8 +52,35 @@ export function AddBookModal({
       setStar(false);
       setOwned(false);
       setError(null);
+      setCoverId(null);
+      setCoverStatus("idle");
+      coverRequestId.current += 1;
     }
   }, [open, categories]);
+
+  useEffect(() => {
+    if (!open) return;
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length < 3) {
+      setCoverStatus("idle");
+      setCoverId(null);
+      return;
+    }
+    setCoverStatus("loading");
+    const myRequestId = ++coverRequestId.current;
+    const handle = setTimeout(async () => {
+      const res = await lookupBookCoverAction(trimmedTitle, author.trim());
+      if (myRequestId !== coverRequestId.current) return;
+      if (res.ok && res.data.coverId != null) {
+        setCoverId(res.data.coverId);
+        setCoverStatus("found");
+      } else {
+        setCoverId(null);
+        setCoverStatus("none");
+      }
+    }, 700);
+    return () => clearTimeout(handle);
+  }, [title, author, open]);
 
   async function handleSubmit() {
     if (!title.trim()) {
@@ -56,7 +89,16 @@ export function AddBookModal({
     }
     setSaving(true);
     setError(null);
-    const err = await onSubmit({ title: title.trim(), author: author.trim(), categoryId, status, star, owned, note: note.trim() });
+    const err = await onSubmit({
+      title: title.trim(),
+      author: author.trim(),
+      categoryId,
+      status,
+      star,
+      owned,
+      note: note.trim(),
+      coverId,
+    });
     setSaving(false);
     if (err) {
       setError(err);
@@ -85,6 +127,26 @@ export function AddBookModal({
           className={inputClass}
         />
       </Field>
+
+      {coverStatus !== "idle" && (
+        <div className="mb-[18px] flex items-center gap-3 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
+          <CoverThumb
+            coverId={coverId}
+            categoryId={categoryId}
+            background={bookColor(title || "cover")}
+            size="S"
+            widthClassName="w-9"
+            heightClassName="h-[52px]"
+            emojiTextClassName="text-base"
+          />
+          <p className="text-xs text-text-3">
+            {coverStatus === "loading" && "Looking up cover…"}
+            {coverStatus === "found" && "Cover found — it'll be attached automatically."}
+            {coverStatus === "none" && "No cover found — a default icon will be used."}
+          </p>
+        </div>
+      )}
+
       <Field label="Status">
         <select value={status} onChange={(e) => setStatus(e.target.value as BookStatus)} className={inputClass}>
           {STATUSES.map((s) => (

@@ -41,6 +41,7 @@ export interface Database {
           star: boolean;
           owned: boolean;
           note: string;
+          cover_id: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -54,6 +55,7 @@ export interface Database {
           star?: boolean;
           owned?: boolean;
           note?: string;
+          cover_id?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -67,6 +69,7 @@ export interface Database {
           star?: boolean;
           owned?: boolean;
           note?: string;
+          cover_id?: number | null;
           created_at?: string;
           updated_at?: string;
         };

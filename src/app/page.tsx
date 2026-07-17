@@ -28,6 +28,7 @@ export default async function Home() {
     star: row.star,
     owned: row.owned,
     note: row.note,
+    coverId: row.cover_id,
   }));
 
   const categories: Category[] = (categoryRows ?? []).map((row) => ({

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addBookAction,
   addCategoryAction,
+  backfillCoversAction,
   deleteBookAction,
   deleteCategoryAction,
   importLibraryAction,
@@ -38,6 +39,22 @@ export function LibraryApp({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailBook, setDetailBook] = useState<Book | null>(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [backfillingCovers, setBackfillingCovers] = useState(false);
+  const backfillStarted = useRef(false);
+
+  useEffect(() => {
+    if (backfillStarted.current) return;
+    if (!books.some((b) => b.coverId == null)) return;
+    backfillStarted.current = true;
+    setBackfillingCovers(true);
+    backfillCoversAction().then((res) => {
+      setBackfillingCovers(false);
+      if (!res.ok || res.data.books.length === 0) return;
+      const updates = new Map(res.data.books.map((b) => [b.id, b]));
+      setBooks((prev) => prev.map((b) => updates.get(b.id) ?? b));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const stats = useMemo(() => {
     const total = books.length;
@@ -200,6 +217,7 @@ export function LibraryApp({
         onOpenCatModal={() => setCatModalOpen(true)}
         userEmail={userEmail}
         onSignOut={() => signOutAction()}
+        backfillingCovers={backfillingCovers}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">

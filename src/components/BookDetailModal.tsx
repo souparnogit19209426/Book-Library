@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CoverThumb } from "@/components/CoverThumb";
 import { Modal } from "@/components/Modal";
-import { STATUS_LABELS, STATUSES, bookColor, catEmoji } from "@/lib/constants";
+import { STATUS_LABELS, STATUSES, bookColor } from "@/lib/constants";
 import type { Book, BookStatus, Category } from "@/lib/types";
 
 const STATUS_BTN_ACTIVE: Record<BookStatus, string> = {
@@ -86,11 +87,16 @@ export function BookDetailModal({
   return (
     <Modal open={!!book} onClose={onClose} title="Book Details" maxWidthClassName="max-w-[440px]">
       <div className="mb-5 flex gap-5">
-        <div
-          className="flex h-28 w-20 shrink-0 items-center justify-center rounded-md text-3xl shadow-[3px_3px_12px_rgba(0,0,0,0.12)]"
-          style={{ background: bookColor(book.id) }}
-        >
-          {catEmoji(categoryId)}
+        <div className="shrink-0">
+          <CoverThumb
+            coverId={book.coverId}
+            categoryId={categoryId}
+            background={bookColor(book.id)}
+            size="L"
+            widthClassName="w-20"
+            heightClassName="h-28"
+            emojiTextClassName="text-3xl"
+          />
         </div>
         <div className="flex-1">
           <div className="font-serif text-xl leading-tight text-text-1">{book.title}</div>
