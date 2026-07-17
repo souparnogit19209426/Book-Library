@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { seedLibraryIfEmpty } from "@/app/actions";
+import { ensureReadingPathAction, seedLibraryIfEmpty } from "@/app/actions";
 import { LibraryApp } from "@/components/LibraryApp";
 import type { Book, Category } from "@/lib/types";
 
@@ -14,9 +14,10 @@ export default async function Home() {
 
   await seedLibraryIfEmpty();
 
-  const [{ data: bookRows }, { data: categoryRows }] = await Promise.all([
+  const [{ data: bookRows }, { data: categoryRows }, pathResult] = await Promise.all([
     supabase.from("books").select().order("created_at", { ascending: true }),
     supabase.from("categories").select().order("created_at", { ascending: true }),
+    ensureReadingPathAction(),
   ]);
 
   const books: Book[] = (bookRows ?? []).map((row) => ({
@@ -30,6 +31,8 @@ export default async function Home() {
     note: row.note,
     coverId: row.cover_id,
     coverUrl: row.cover_url,
+    currentPage: row.current_page,
+    totalPages: row.total_pages,
   }));
 
   const categories: Category[] = (categoryRows ?? []).map((row) => ({
@@ -41,6 +44,8 @@ export default async function Home() {
     <LibraryApp
       initialBooks={books}
       initialCategories={categories}
+      initialPathId={pathResult.ok ? pathResult.data.pathId : null}
+      initialPathItems={pathResult.ok ? pathResult.data.items : []}
       userEmail={user.email ?? ""}
     />
   );

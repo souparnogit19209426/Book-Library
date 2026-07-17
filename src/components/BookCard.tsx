@@ -17,6 +17,11 @@ const DOT_CLASSES: Record<Book["status"], string> = {
 };
 
 export function BookCard({ book, onClick }: { book: Book; onClick: () => void }) {
+  const progressPct =
+    book.status === "reading" && book.totalPages && book.totalPages > 0 && book.currentPage != null
+      ? Math.min(100, Math.round((book.currentPage / book.totalPages) * 100))
+      : null;
+
   return (
     <div
       onClick={onClick}
@@ -63,6 +68,11 @@ export function BookCard({ book, onClick }: { book: Book; onClick: () => void })
           <span className={`h-[4px] w-[4px] rounded-full ${DOT_CLASSES[book.status]}`} />
           {STATUS_LABELS[book.status]}
         </span>
+        {progressPct !== null && (
+          <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-surface-3">
+            <div className="h-full rounded-full bg-text-1" style={{ width: `${progressPct}%` }} />
+          </div>
+        )}
       </div>
     </div>
   );

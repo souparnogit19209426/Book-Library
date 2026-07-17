@@ -16,6 +16,14 @@ export interface Book {
   note: string;
   coverId: number | null;
   coverUrl: string | null;
+  currentPage: number | null;
+  totalPages: number | null;
+}
+
+export interface ReadingPathItem {
+  id: string;
+  bookId: string;
+  position: number;
 }
 
 export interface LibraryExport {

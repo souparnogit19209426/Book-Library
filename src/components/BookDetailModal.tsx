@@ -38,6 +38,8 @@ export function BookDetailModal({
   const [note, setNote] = useState("");
   const [star, setStar] = useState(false);
   const [owned, setOwned] = useState(false);
+  const [currentPage, setCurrentPage] = useState("");
+  const [totalPages, setTotalPages] = useState("");
   const [status, setStatus] = useState<BookStatus>("unread");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,8 @@ export function BookDetailModal({
       setNote(book.note);
       setStar(book.star);
       setOwned(book.owned);
+      setCurrentPage(book.currentPage != null ? String(book.currentPage) : "");
+      setTotalPages(book.totalPages != null ? String(book.totalPages) : "");
       setStatus(book.status);
       setError(null);
     }
@@ -72,6 +76,8 @@ export function BookDetailModal({
       star,
       owned,
       status,
+      currentPage: currentPage.trim() === "" ? null : Math.max(0, parseInt(currentPage, 10) || 0),
+      totalPages: totalPages.trim() === "" ? null : Math.max(0, parseInt(totalPages, 10) || 0),
     });
     setSaving(false);
     if (err) {
@@ -109,6 +115,13 @@ export function BookDetailModal({
     setUploadingCover(false);
     if (err) setError(err);
   }
+
+  const currentPageNum = currentPage.trim() === "" ? null : parseInt(currentPage, 10);
+  const totalPagesNum = totalPages.trim() === "" ? null : parseInt(totalPages, 10);
+  const progressPct =
+    totalPagesNum && totalPagesNum > 0 && currentPageNum != null && !Number.isNaN(currentPageNum)
+      ? Math.min(100, Math.round((currentPageNum / totalPagesNum) * 100))
+      : null;
 
   return (
     <Modal open={!!book} onClose={onClose} title="Book Details" maxWidthClassName="max-w-[440px]">
@@ -206,13 +219,48 @@ export function BookDetailModal({
       </div>
 
       <div className="mt-4">
-        <Field label="Notes">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-text-3">
+          Reading Progress
+        </label>
+        <div className="flex items-center gap-2.5">
           <input
-            type="text"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={currentPage}
+            onChange={(e) => setCurrentPage(e.target.value)}
+            placeholder="Current page"
+            className={inputClass}
+          />
+          <span className="shrink-0 text-sm text-text-4">of</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={totalPages}
+            onChange={(e) => setTotalPages(e.target.value)}
+            placeholder="Total pages"
+            className={inputClass}
+          />
+        </div>
+        {progressPct !== null && (
+          <div className="mt-2.5">
+            <div className="h-[3px] overflow-hidden rounded-full bg-surface-3">
+              <div className="h-full rounded-full bg-text-1 transition-[width]" style={{ width: `${progressPct}%` }} />
+            </div>
+            <div className="mt-1 text-[11px] text-text-4">{progressPct}% through</div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-[18px]">
+        <Field label="Notes & Key Takeaways">
+          <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. Paused at chapter 3"
-            className={inputClass}
+            placeholder="What did you learn from this book? Key ideas, quotes, things to apply…"
+            rows={5}
+            className={`${inputClass} resize-y`}
           />
         </Field>
       </div>

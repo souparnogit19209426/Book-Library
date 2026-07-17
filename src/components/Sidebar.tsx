@@ -17,6 +17,7 @@ export function Sidebar({
   backfillingCovers = false,
   open = false,
   onClose,
+  pathCount = 0,
 }: {
   stats: { total: number; done: number; reading: number; unread: number; starred: number; owned: number };
   categories: Category[];
@@ -29,6 +30,7 @@ export function Sidebar({
   backfillingCovers?: boolean;
   open?: boolean;
   onClose?: () => void;
+  pathCount?: number;
 }) {
   function handleNav(f: NavFilter) {
     onNavFilter(f);
@@ -102,6 +104,13 @@ export function Sidebar({
           label="Owned (Physical)"
           count={stats.owned}
           onClick={() => handleNav("owned")}
+        />
+        <NavItem
+          active={navFilter === "reading-path"}
+          icon="🧭"
+          label="Reading Path"
+          count={pathCount}
+          onClick={() => handleNav("reading-path")}
         />
 
         <div className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wide text-text-4">

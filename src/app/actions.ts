@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_CATEGORIES, DEFAULT_BOOKS } from "@/lib/constants";
 import { searchCoverId } from "@/lib/openLibrary";
-import type { Book, BookStatus, Category, LibraryExport } from "@/lib/types";
+import type { Book, BookStatus, Category, LibraryExport, ReadingPathItem } from "@/lib/types";
 import { redirect } from "next/navigation";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -36,6 +36,8 @@ function rowToBook(row: {
   note: string;
   cover_id: number | null;
   cover_url: string | null;
+  current_page: number | null;
+  total_pages: number | null;
 }): Book {
   return {
     id: row.id,
@@ -48,6 +50,8 @@ function rowToBook(row: {
     note: row.note,
     coverId: row.cover_id,
     coverUrl: row.cover_url,
+    currentPage: row.current_page,
+    totalPages: row.total_pages,
   };
 }
 
@@ -201,6 +205,8 @@ export async function updateBookAction(
     star: boolean;
     owned: boolean;
     note: string;
+    currentPage: number | null;
+    totalPages: number | null;
   }>,
 ): Promise<ActionResult<Book>> {
   try {
@@ -215,6 +221,8 @@ export async function updateBookAction(
         ...(patch.star !== undefined ? { star: patch.star } : {}),
         ...(patch.owned !== undefined ? { owned: patch.owned } : {}),
         ...(patch.note !== undefined ? { note: patch.note } : {}),
+        ...(patch.currentPage !== undefined ? { current_page: patch.currentPage } : {}),
+        ...(patch.totalPages !== undefined ? { total_pages: patch.totalPages } : {}),
       })
       .eq("id", id)
       .eq("user_id", userId)
@@ -224,6 +232,123 @@ export async function updateBookAction(
     return ok(rowToBook(data));
   } catch (err) {
     return fail(err, "Failed to update book");
+  }
+}
+
+export async function ensureReadingPathAction(): Promise<ActionResult<{ pathId: string; items: ReadingPathItem[] }>> {
+  try {
+    const { supabase, userId } = await requireUser();
+
+    const { data: existing, error: selectError } = await supabase
+      .from("reading_paths")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    if (selectError) throw selectError;
+
+    let pathId = existing?.id;
+    if (!pathId) {
+      const { data: created, error: insertError } = await supabase
+        .from("reading_paths")
+        .insert({ user_id: userId, name: "My Reading Path" })
+        .select("id")
+        .single();
+      if (insertError) throw insertError;
+      pathId = created.id;
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from("reading_path_items")
+      .select("id, book_id, position")
+      .eq("user_id", userId)
+      .eq("path_id", pathId)
+      .order("position", { ascending: true });
+    if (itemsError) throw itemsError;
+
+    return ok({
+      pathId,
+      items: (items ?? []).map((i) => ({ id: i.id, bookId: i.book_id, position: i.position })),
+    });
+  } catch (err) {
+    return fail(err, "Failed to load reading path");
+  }
+}
+
+export async function addToReadingPathAction(
+  pathId: string,
+  bookId: string,
+): Promise<ActionResult<ReadingPathItem>> {
+  try {
+    const { supabase, userId } = await requireUser();
+
+    const { data: maxRow } = await supabase
+      .from("reading_path_items")
+      .select("position")
+      .eq("user_id", userId)
+      .eq("path_id", pathId)
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextPosition = (maxRow?.position ?? -1) + 1;
+
+    const { data, error } = await supabase
+      .from("reading_path_items")
+      .insert({ user_id: userId, path_id: pathId, book_id: bookId, position: nextPosition })
+      .select("id, book_id, position")
+      .single();
+    if (error) throw error;
+
+    return ok({ id: data.id, bookId: data.book_id, position: data.position });
+  } catch (err) {
+    return fail(err, "Failed to add book to reading path");
+  }
+}
+
+export async function removeFromReadingPathAction(itemId: string): Promise<ActionResult<{ id: string }>> {
+  try {
+    const { supabase, userId } = await requireUser();
+    const { error } = await supabase
+      .from("reading_path_items")
+      .delete()
+      .eq("id", itemId)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return ok({ id: itemId });
+  } catch (err) {
+    return fail(err, "Failed to remove book from reading path");
+  }
+}
+
+export async function reorderReadingPathAction(
+  orderedItemIds: string[],
+): Promise<ActionResult<{ items: ReadingPathItem[] }>> {
+  try {
+    const { supabase, userId } = await requireUser();
+
+    const results = await Promise.all(
+      orderedItemIds.map((itemId, index) =>
+        supabase
+          .from("reading_path_items")
+          .update({ position: index })
+          .eq("id", itemId)
+          .eq("user_id", userId)
+          .select("id, book_id, position")
+          .single(),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw failed.error;
+
+    const items = results
+      .map((r) => r.data)
+      .filter((d): d is { id: string; book_id: string; position: number } => !!d)
+      .sort((a, b) => a.position - b.position)
+      .map((d) => ({ id: d.id, bookId: d.book_id, position: d.position }));
+
+    return ok({ items });
+  } catch (err) {
+    return fail(err, "Failed to reorder reading path");
   }
 }
 

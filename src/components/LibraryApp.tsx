@@ -4,41 +4,53 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addBookAction,
   addCategoryAction,
+  addToReadingPathAction,
   backfillCoversAction,
   deleteBookAction,
   deleteCategoryAction,
   importLibraryAction,
   removeBookCoverAction,
+  removeFromReadingPathAction,
+  reorderReadingPathAction,
   signOutAction,
   updateBookAction,
   uploadBookCoverAction,
 } from "@/app/actions";
 import { AddBookModal, type NewBookInput } from "@/components/AddBookModal";
+import { AddToPathModal } from "@/components/AddToPathModal";
 import { BookCard } from "@/components/BookCard";
 import { BookDetailModal } from "@/components/BookDetailModal";
 import { CategoryModal } from "@/components/CategoryModal";
 import { ProgressSection } from "@/components/ProgressSection";
+import { ReadingPath } from "@/components/ReadingPath";
 import { Sidebar, type NavFilter } from "@/components/Sidebar";
 import { StatusTabs } from "@/components/StatusTabs";
 import { TopBar } from "@/components/TopBar";
 import { catEmoji } from "@/lib/constants";
-import type { Book, BookStatus, Category, LibraryExport } from "@/lib/types";
+import type { Book, BookStatus, Category, LibraryExport, ReadingPathItem } from "@/lib/types";
 
 export function LibraryApp({
   initialBooks,
   initialCategories,
+  initialPathId,
+  initialPathItems,
   userEmail,
 }: {
   initialBooks: Book[];
   initialCategories: Category[];
+  initialPathId: string | null;
+  initialPathItems: ReadingPathItem[];
   userEmail: string;
 }) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [pathId] = useState<string | null>(initialPathId);
+  const [pathItems, setPathItems] = useState<ReadingPathItem[]>(initialPathItems);
   const [navFilter, setNavFilter] = useState<NavFilter>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | BookStatus>("all");
   const [search, setSearch] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addToPathModalOpen, setAddToPathModalOpen] = useState(false);
   const [detailBook, setDetailBook] = useState<Book | null>(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -91,16 +103,20 @@ export function LibraryApp({
     });
   }, [books, search, navFilter, statusFilter]);
 
+  const pathBookIds = useMemo(() => new Set(pathItems.map((i) => i.bookId)), [pathItems]);
+
   const { pageTitle, pageSubtitle } = useMemo(() => {
     if (navFilter === "all") return { pageTitle: "All Books", pageSubtitle: `${filteredBooks.length} books in your library` };
     if (navFilter === "starred") return { pageTitle: "Starred Books", pageSubtitle: `${filteredBooks.length} starred books` };
     if (navFilter === "owned") return { pageTitle: "Owned Books", pageSubtitle: `${filteredBooks.length} physical copies you own` };
+    if (navFilter === "reading-path")
+      return { pageTitle: "Reading Path", pageSubtitle: `${pathItems.length} book${pathItems.length === 1 ? "" : "s"} planned, in order` };
     const cat = categories.find((c) => c.id === navFilter);
     return {
       pageTitle: cat ? cat.name : navFilter,
       pageSubtitle: `${filteredBooks.length} books in this category`,
     };
-  }, [navFilter, filteredBooks.length, categories]);
+  }, [navFilter, filteredBooks.length, pathItems.length, categories]);
 
   const groupedSections = useMemo(() => {
     const grouped: Record<string, Book[]> = {};
@@ -169,6 +185,35 @@ export function LibraryApp({
     const updated = res.data;
     setBooks((prev) => prev.map((b) => (b.id === id ? updated : b)));
     setDetailBook((prev) => (prev && prev.id === id ? updated : prev));
+  }
+
+  async function handleAddToPath(bookId: string) {
+    if (!pathId) return "Reading path isn't ready yet — try again in a moment.";
+    const res = await addToReadingPathAction(pathId, bookId);
+    if (!res.ok) return res.error;
+    const newItem = res.data;
+    setPathItems((prev) => [...prev, newItem]);
+  }
+
+  async function handleRemoveFromPath(itemId: string) {
+    setPathItems((prev) => prev.filter((i) => i.id !== itemId));
+    await removeFromReadingPathAction(itemId);
+  }
+
+  function handleReorderPath(orderedItemIds: string[]) {
+    setPathItems((prev) => {
+      const byId = new Map(prev.map((i) => [i.id, i]));
+      return orderedItemIds.map((id, index) => {
+        const item = byId.get(id);
+        return item ? { ...item, position: index } : item;
+      }).filter((i): i is ReadingPathItem => !!i);
+    });
+    reorderReadingPathAction(orderedItemIds);
+  }
+
+  function handleUpdateProgress(bookId: string, currentPage: number | null, totalPages: number | null) {
+    setBooks((prev) => prev.map((b) => (b.id === bookId ? { ...b, currentPage, totalPages } : b)));
+    updateBookAction(bookId, { currentPage, totalPages });
   }
 
   async function handleAddCategory(name: string) {
@@ -241,6 +286,7 @@ export function LibraryApp({
         backfillingCovers={backfillingCovers}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        pathCount={pathItems.length}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -261,36 +307,51 @@ export function LibraryApp({
 
           <ProgressSection done={stats.done} reading={stats.reading} total={stats.total} />
 
-          <StatusTabs value={statusFilter} onChange={setStatusFilter} />
-
-          {filteredBooks.length === 0 ? (
-            <div className="px-8 py-16 text-center text-text-3">
-              <div className="mb-3 text-4xl">📭</div>
-              <div className="text-base font-medium text-text-2">No books found</div>
-              <div className="mt-1 text-sm">Try adjusting your search or filters</div>
-            </div>
+          {navFilter === "reading-path" ? (
+            <ReadingPath
+              items={pathItems}
+              books={books}
+              search={search}
+              onAddClick={() => setAddToPathModalOpen(true)}
+              onRemove={handleRemoveFromPath}
+              onReorder={handleReorderPath}
+              onOpenBook={setDetailBook}
+              onUpdateProgress={handleUpdateProgress}
+            />
           ) : (
-            <div className="fade-in">
-              {groupedSections.map(({ category, items, hideHeader }) => (
-                <div key={category.id} className="mb-10">
-                  {!hideHeader && (
-                    <div className="mb-3.5 flex items-center gap-3">
-                      <span className="text-base">{catEmoji(category.id)}</span>
-                      <span className="text-[13px] font-semibold uppercase tracking-wide text-text-2">
-                        {category.name}
-                      </span>
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="text-xs font-medium text-text-4">{items.length}</span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 md:gap-4">
-                    {items.map((b) => (
-                      <BookCard key={b.id} book={b} onClick={() => setDetailBook(b)} />
-                    ))}
-                  </div>
+            <>
+              <StatusTabs value={statusFilter} onChange={setStatusFilter} />
+
+              {filteredBooks.length === 0 ? (
+                <div className="px-8 py-16 text-center text-text-3">
+                  <div className="mb-3 text-4xl">📭</div>
+                  <div className="text-base font-medium text-text-2">No books found</div>
+                  <div className="mt-1 text-sm">Try adjusting your search or filters</div>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="fade-in">
+                  {groupedSections.map(({ category, items, hideHeader }) => (
+                    <div key={category.id} className="mb-10">
+                      {!hideHeader && (
+                        <div className="mb-3.5 flex items-center gap-3">
+                          <span className="text-base">{catEmoji(category.id)}</span>
+                          <span className="text-[13px] font-semibold uppercase tracking-wide text-text-2">
+                            {category.name}
+                          </span>
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="text-xs font-medium text-text-4">{items.length}</span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 md:gap-4">
+                        {items.map((b) => (
+                          <BookCard key={b.id} book={b} onClick={() => setDetailBook(b)} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -320,6 +381,14 @@ export function LibraryApp({
         bookCounts={categoryCounts}
         onAdd={handleAddCategory}
         onDelete={handleDeleteCategory}
+      />
+
+      <AddToPathModal
+        open={addToPathModalOpen}
+        onClose={() => setAddToPathModalOpen(false)}
+        books={books}
+        pathBookIds={pathBookIds}
+        onAdd={handleAddToPath}
       />
     </div>
   );

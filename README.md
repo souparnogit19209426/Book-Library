@@ -23,7 +23,7 @@ Every table is scoped per-user (`user_id` + RLS policies), so the app is single-
 
 ## 1. Set up Supabase
 
-1. In your Supabase project, open **SQL Editor** and run the migration in [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). This creates the `books` and `categories` tables with RLS policies scoped to `auth.uid()`.
+1. In your Supabase project, open **SQL Editor** and run each migration in `supabase/migrations/` **in order** (0001 → 0004). They create the `books`/`categories` tables, the cover-art columns and `book-covers` storage bucket, and the `reading_paths`/`reading_path_items` tables — all with RLS policies scoped to `auth.uid()`.
 2. Go to **Authentication → Providers** and confirm **Email** is enabled.
 3. Go to **Authentication → Settings** and turn **off** "Allow new users to sign up" (recommended while this stays single-user — see below for how you'll create your one account).
 4. Go to **Project Settings → API** and copy:
@@ -67,6 +67,8 @@ Visit [http://localhost:3000](http://localhost:3000), sign in, and the app auto-
 - Full CRUD for books and categories via Next.js Server Actions (`src/app/actions.ts`) — no separate API layer
 - Search, status filters (Unread / Reading / Read / Paused), starred and owned-copy views, category browsing
 - Real book cover art from the [Open Library Covers API](https://openlibrary.org/dev/docs/api/covers) (key-less) — looked up live while adding a book, with a one-time background backfill for existing books missing one; falls back to a category emoji tile when no match is found
+- Manual cover upload/photo for books Open Library has no artwork for (Supabase Storage, RLS-scoped per user)
+- **Reading Path**: plan an ordered sequence of books to read next, drawn only from your existing library. Drag to reorder (touch-friendly via dnd-kit, not just desktop mouse drag), track current/total page progress with a live progress bar, and jot notes/key takeaways per book — all of which show identically whether you open the book from the library grid or from the path, since it's the same underlying book record
 - JSON export/import for backups (replaces your whole library on import, with a confirmation prompt)
 - Row Level Security ensures one user's data is never visible to another, even before you open up signups
 - Responsive layout: sidebar collapses to a slide-in drawer below the `md` breakpoint for phone/tablet use
@@ -106,14 +108,18 @@ src/
     LibraryApp.tsx        Client component holding all UI state
     Sidebar.tsx, TopBar.tsx, ProgressSection.tsx, StatusTabs.tsx
     BookCard.tsx, AddBookModal.tsx, BookDetailModal.tsx, CategoryModal.tsx
+    ReadingPath.tsx        Ordered/drag-reorderable reading plan (dnd-kit)
+    AddToPathModal.tsx     Picker that adds existing library books to the path
     CoverThumb.tsx         Shared cover-image renderer with emoji fallback
     Modal.tsx              Generic modal shell
   lib/
     constants.ts          Default categories/books seed data, emoji/color helpers
-    types.ts               Book/Category/BookStatus types
+    types.ts               Book/Category/BookStatus/ReadingPathItem types
     openLibrary.ts         Open Library cover lookup + image URL helper
     supabase/               Browser/server/middleware Supabase clients + DB types
 supabase/
   migrations/0001_init.sql Schema + RLS policies
   migrations/0002_add_cover_id.sql Adds books.cover_id
+  migrations/0003_book_cover_uploads.sql Adds books.cover_url + book-covers storage bucket
+  migrations/0004_reading_path.sql Adds reading_paths/reading_path_items + books.current_page/total_pages
 ```
