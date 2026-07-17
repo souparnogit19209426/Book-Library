@@ -263,7 +263,7 @@ export function LibraryApp({
                       <span className="text-xs font-medium text-text-4">{items.length}</span>
                     </div>
                   )}
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 md:gap-4">
                     {items.map((b) => (
                       <BookCard key={b.id} book={b} onClick={() => setDetailBook(b)} />
                     ))}

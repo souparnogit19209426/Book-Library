@@ -20,38 +20,48 @@ export function BookCard({ book, onClick }: { book: Book; onClick: () => void })
   return (
     <div
       onClick={onClick}
-      className="flex cursor-pointer flex-col gap-2.5 rounded-2xl border border-border bg-surface p-4 transition-all hover:-translate-y-px hover:border-border-2 hover:shadow-md"
+      className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-surface transition-all hover:-translate-y-0.5 hover:border-border-2 hover:shadow-md"
     >
-      <div className="flex h-[100px] items-center justify-center overflow-hidden rounded-md bg-surface-2">
+      <div className="relative aspect-[2/3] w-full bg-surface-2">
         <CoverThumb
           coverId={book.coverId}
           categoryId={book.categoryId}
           background={bookColor(book.id)}
-          size="M"
+          size="L"
+          fill
+          emojiTextClassName="text-4xl"
         />
+        {(book.owned || book.star) && (
+          <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
+            {book.owned && (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[10px] backdrop-blur-sm"
+                title="You own a physical copy"
+              >
+                📦
+              </span>
+            )}
+            {book.star && (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[10px]"
+                title="Starred"
+              >
+                ⭐
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      <div>
-        <div className="text-sm font-medium leading-tight text-text-1">{book.title}</div>
-        <div className="mt-0.5 text-xs text-text-3">{book.author || "—"}</div>
-      </div>
-      <div className="mt-auto flex items-center justify-between">
+
+      <div className="flex flex-1 flex-col gap-1 p-2.5">
+        <div className="line-clamp-2 text-[13px] font-medium leading-snug text-text-1">{book.title}</div>
+        <div className="truncate text-[11px] text-text-3">{book.author || "—"}</div>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${PILL_CLASSES[book.status]}`}
+          className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${PILL_CLASSES[book.status]}`}
         >
-          <span className={`h-[5px] w-[5px] rounded-full ${DOT_CLASSES[book.status]}`} />
+          <span className={`h-[4px] w-[4px] rounded-full ${DOT_CLASSES[book.status]}`} />
           {STATUS_LABELS[book.status]}
         </span>
-        <div className="flex items-center gap-1">
-          {book.owned && (
-            <span
-              className="inline-flex items-center gap-0.5 rounded-full bg-[#fdf6ec] px-2 py-0.5 text-[10px] font-medium text-[#92400e]"
-              title="You own a physical copy"
-            >
-              📦 Owned
-            </span>
-          )}
-          {book.star && <span className="text-[13px] text-[#d4a843]">⭐</span>}
-        </div>
       </div>
     </div>
   );
