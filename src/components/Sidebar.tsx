@@ -1,9 +1,13 @@
 "use client";
 
 import { catEmoji } from "@/lib/constants";
-import type { Category } from "@/lib/types";
+import type { Category, ReadingPath } from "@/lib/types";
 
 export type NavFilter = "all" | "starred" | "owned" | string;
+
+export function pathNavFilter(pathId: string) {
+  return `path:${pathId}`;
+}
 
 export function Sidebar({
   stats,
@@ -17,7 +21,9 @@ export function Sidebar({
   backfillingCovers = false,
   open = false,
   onClose,
-  pathCount = 0,
+  paths,
+  pathItemCounts,
+  onOpenPathsModal,
 }: {
   stats: { total: number; done: number; reading: number; unread: number; starred: number; owned: number };
   categories: Category[];
@@ -30,7 +36,9 @@ export function Sidebar({
   backfillingCovers?: boolean;
   open?: boolean;
   onClose?: () => void;
-  pathCount?: number;
+  paths: ReadingPath[];
+  pathItemCounts: Record<string, number>;
+  onOpenPathsModal: () => void;
 }) {
   function handleNav(f: NavFilter) {
     onNavFilter(f);
@@ -105,13 +113,26 @@ export function Sidebar({
           count={stats.owned}
           onClick={() => handleNav("owned")}
         />
-        <NavItem
-          active={navFilter === "reading-path"}
-          icon="🧭"
-          label="Reading Path"
-          count={pathCount}
-          onClick={() => handleNav("reading-path")}
-        />
+        <div className="mb-1.5 mt-4 flex items-center justify-between px-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-text-4">Reading Paths</span>
+          <button
+            onClick={onOpenPathsModal}
+            aria-label="Manage reading paths"
+            className="text-sm leading-none text-text-4 transition hover:text-text-1"
+          >
+            +
+          </button>
+        </div>
+        {paths.map((p) => (
+          <NavItem
+            key={p.id}
+            active={navFilter === pathNavFilter(p.id)}
+            icon="🧭"
+            label={p.name}
+            count={pathItemCounts[p.id] ?? 0}
+            onClick={() => handleNav(pathNavFilter(p.id))}
+          />
+        ))}
 
         <div className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wide text-text-4">
           Categories

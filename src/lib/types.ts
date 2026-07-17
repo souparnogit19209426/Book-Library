@@ -20,8 +20,14 @@ export interface Book {
   totalPages: number | null;
 }
 
+export interface ReadingPath {
+  id: string;
+  name: string;
+}
+
 export interface ReadingPathItem {
   id: string;
+  pathId: string;
   bookId: string;
   position: number;
 }

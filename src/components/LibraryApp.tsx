@@ -6,11 +6,14 @@ import {
   addCategoryAction,
   addToReadingPathAction,
   backfillCoversAction,
+  createReadingPathAction,
   deleteBookAction,
   deleteCategoryAction,
+  deleteReadingPathAction,
   importLibraryAction,
   removeBookCoverAction,
   removeFromReadingPathAction,
+  renameReadingPathAction,
   reorderReadingPathAction,
   signOutAction,
   updateBookAction,
@@ -21,36 +24,38 @@ import { AddToPathModal } from "@/components/AddToPathModal";
 import { BookCard } from "@/components/BookCard";
 import { BookDetailModal } from "@/components/BookDetailModal";
 import { CategoryModal } from "@/components/CategoryModal";
+import { ManageReadingPathsModal } from "@/components/ManageReadingPathsModal";
 import { ProgressSection } from "@/components/ProgressSection";
 import { ReadingPath } from "@/components/ReadingPath";
 import { Sidebar, type NavFilter } from "@/components/Sidebar";
 import { StatusTabs } from "@/components/StatusTabs";
 import { TopBar } from "@/components/TopBar";
 import { catEmoji } from "@/lib/constants";
-import type { Book, BookStatus, Category, LibraryExport, ReadingPathItem } from "@/lib/types";
+import type { Book, BookStatus, Category, LibraryExport, ReadingPath as ReadingPathType, ReadingPathItem } from "@/lib/types";
 
 export function LibraryApp({
   initialBooks,
   initialCategories,
-  initialPathId,
+  initialPaths,
   initialPathItems,
   userEmail,
 }: {
   initialBooks: Book[];
   initialCategories: Category[];
-  initialPathId: string | null;
+  initialPaths: ReadingPathType[];
   initialPathItems: ReadingPathItem[];
   userEmail: string;
 }) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [pathId] = useState<string | null>(initialPathId);
+  const [paths, setPaths] = useState<ReadingPathType[]>(initialPaths);
   const [pathItems, setPathItems] = useState<ReadingPathItem[]>(initialPathItems);
   const [navFilter, setNavFilter] = useState<NavFilter>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | BookStatus>("all");
   const [search, setSearch] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addToPathModalOpen, setAddToPathModalOpen] = useState(false);
+  const [pathsModalOpen, setPathsModalOpen] = useState(false);
   const [detailBook, setDetailBook] = useState<Book | null>(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -103,20 +108,42 @@ export function LibraryApp({
     });
   }, [books, search, navFilter, statusFilter]);
 
-  const pathBookIds = useMemo(() => new Set(pathItems.map((i) => i.bookId)), [pathItems]);
+  const activePathId = navFilter.startsWith("path:") ? navFilter.slice(5) : null;
+
+  const pathItemCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const i of pathItems) map[i.pathId] = (map[i.pathId] ?? 0) + 1;
+    return map;
+  }, [pathItems]);
+
+  const currentPathItems = useMemo(
+    () =>
+      activePathId
+        ? pathItems.filter((i) => i.pathId === activePathId).sort((a, b) => a.position - b.position)
+        : [],
+    [pathItems, activePathId],
+  );
+
+  const activePathBookIds = useMemo(() => new Set(currentPathItems.map((i) => i.bookId)), [currentPathItems]);
 
   const { pageTitle, pageSubtitle } = useMemo(() => {
     if (navFilter === "all") return { pageTitle: "All Books", pageSubtitle: `${filteredBooks.length} books in your library` };
     if (navFilter === "starred") return { pageTitle: "Starred Books", pageSubtitle: `${filteredBooks.length} starred books` };
     if (navFilter === "owned") return { pageTitle: "Owned Books", pageSubtitle: `${filteredBooks.length} physical copies you own` };
-    if (navFilter === "reading-path")
-      return { pageTitle: "Reading Path", pageSubtitle: `${pathItems.length} book${pathItems.length === 1 ? "" : "s"} planned, in order` };
+    if (activePathId) {
+      const path = paths.find((p) => p.id === activePathId);
+      const count = currentPathItems.length;
+      return {
+        pageTitle: path ? path.name : "Reading Path",
+        pageSubtitle: `${count} book${count === 1 ? "" : "s"} planned, in order`,
+      };
+    }
     const cat = categories.find((c) => c.id === navFilter);
     return {
       pageTitle: cat ? cat.name : navFilter,
       pageSubtitle: `${filteredBooks.length} books in this category`,
     };
-  }, [navFilter, filteredBooks.length, pathItems.length, categories]);
+  }, [navFilter, filteredBooks.length, activePathId, currentPathItems.length, paths, categories]);
 
   const groupedSections = useMemo(() => {
     const grouped: Record<string, Book[]> = {};
@@ -188,8 +215,8 @@ export function LibraryApp({
   }
 
   async function handleAddToPath(bookId: string) {
-    if (!pathId) return "Reading path isn't ready yet — try again in a moment.";
-    const res = await addToReadingPathAction(pathId, bookId);
+    if (!activePathId) return "Open a reading path first.";
+    const res = await addToReadingPathAction(activePathId, bookId);
     if (!res.ok) return res.error;
     const newItem = res.data;
     setPathItems((prev) => [...prev, newItem]);
@@ -202,13 +229,33 @@ export function LibraryApp({
 
   function handleReorderPath(orderedItemIds: string[]) {
     setPathItems((prev) => {
-      const byId = new Map(prev.map((i) => [i.id, i]));
-      return orderedItemIds.map((id, index) => {
-        const item = byId.get(id);
-        return item ? { ...item, position: index } : item;
-      }).filter((i): i is ReadingPathItem => !!i);
+      const positionById = new Map(orderedItemIds.map((id, index) => [id, index]));
+      return prev.map((item) =>
+        positionById.has(item.id) ? { ...item, position: positionById.get(item.id)! } : item,
+      );
     });
     reorderReadingPathAction(orderedItemIds);
+  }
+
+  async function handleCreatePath(name: string) {
+    const res = await createReadingPathAction(name);
+    if (!res.ok) return res.error;
+    setPaths((prev) => [...prev, res.data]);
+  }
+
+  async function handleRenamePath(id: string, name: string) {
+    const res = await renameReadingPathAction(id, name);
+    if (!res.ok) return res.error;
+    const updated = res.data;
+    setPaths((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  }
+
+  async function handleDeletePath(id: string) {
+    const res = await deleteReadingPathAction(id);
+    if (!res.ok) return res.error;
+    setPaths((prev) => prev.filter((p) => p.id !== id));
+    setPathItems((prev) => prev.filter((i) => i.pathId !== id));
+    if (activePathId === id) setNavFilter("all");
   }
 
   function handleUpdateProgress(bookId: string, currentPage: number | null, totalPages: number | null) {
@@ -286,7 +333,9 @@ export function LibraryApp({
         backfillingCovers={backfillingCovers}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        pathCount={pathItems.length}
+        paths={paths}
+        pathItemCounts={pathItemCounts}
+        onOpenPathsModal={() => setPathsModalOpen(true)}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -307,9 +356,9 @@ export function LibraryApp({
 
           <ProgressSection done={stats.done} reading={stats.reading} total={stats.total} />
 
-          {navFilter === "reading-path" ? (
+          {activePathId ? (
             <ReadingPath
-              items={pathItems}
+              items={currentPathItems}
               books={books}
               search={search}
               onAddClick={() => setAddToPathModalOpen(true)}
@@ -387,8 +436,18 @@ export function LibraryApp({
         open={addToPathModalOpen}
         onClose={() => setAddToPathModalOpen(false)}
         books={books}
-        pathBookIds={pathBookIds}
+        pathBookIds={activePathBookIds}
         onAdd={handleAddToPath}
+      />
+
+      <ManageReadingPathsModal
+        open={pathsModalOpen}
+        onClose={() => setPathsModalOpen(false)}
+        paths={paths}
+        itemCounts={pathItemCounts}
+        onCreate={handleCreatePath}
+        onRename={handleRenamePath}
+        onDelete={handleDeletePath}
       />
     </div>
   );

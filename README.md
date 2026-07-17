@@ -68,7 +68,7 @@ Visit [http://localhost:3000](http://localhost:3000), sign in, and the app auto-
 - Search, status filters (Unread / Reading / Read / Paused), starred and owned-copy views, category browsing
 - Real book cover art from the [Open Library Covers API](https://openlibrary.org/dev/docs/api/covers) (key-less) — looked up live while adding a book, with a one-time background backfill for existing books missing one; falls back to a category emoji tile when no match is found
 - Manual cover upload/photo for books Open Library has no artwork for (Supabase Storage, RLS-scoped per user)
-- **Reading Path**: plan an ordered sequence of books to read next, drawn only from your existing library. Drag to reorder (touch-friendly via dnd-kit, not just desktop mouse drag), track current/total page progress with a live progress bar, and jot notes/key takeaways per book — all of which show identically whether you open the book from the library grid or from the path, since it's the same underlying book record
+- **Reading Paths** (plural — create as many named ones as you like, e.g. "Self Development," "Business," "Leadership"): each is an ordered sequence of books to read next, drawn only from your existing library. Drag to reorder within a path (touch-friendly via dnd-kit, not just desktop mouse drag), track current/total page progress with a live progress bar, and jot notes/key takeaways per book — all of which show identically whether you open the book from the library grid or from any path, since it's the same underlying book record. Manage paths (create/rename/delete) from the sidebar's "+" next to Reading Paths
 - JSON export/import for backups (replaces your whole library on import, with a confirmation prompt)
 - Row Level Security ensures one user's data is never visible to another, even before you open up signups
 - Responsive layout: sidebar collapses to a slide-in drawer below the `md` breakpoint for phone/tablet use
@@ -108,8 +108,9 @@ src/
     LibraryApp.tsx        Client component holding all UI state
     Sidebar.tsx, TopBar.tsx, ProgressSection.tsx, StatusTabs.tsx
     BookCard.tsx, AddBookModal.tsx, BookDetailModal.tsx, CategoryModal.tsx
-    ReadingPath.tsx        Ordered/drag-reorderable reading plan (dnd-kit)
-    AddToPathModal.tsx     Picker that adds existing library books to the path
+    ReadingPath.tsx        Ordered/drag-reorderable reading plan for one path (dnd-kit)
+    AddToPathModal.tsx     Picker that adds existing library books to a path
+    ManageReadingPathsModal.tsx  Create/rename/delete named reading paths
     CoverThumb.tsx         Shared cover-image renderer with emoji fallback
     Modal.tsx              Generic modal shell
   lib/
