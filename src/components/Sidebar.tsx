@@ -15,6 +15,8 @@ export function Sidebar({
   userEmail,
   onSignOut,
   backfillingCovers = false,
+  open = false,
+  onClose,
 }: {
   stats: { total: number; done: number; reading: number; unread: number; starred: number; owned: number };
   categories: Category[];
@@ -25,12 +27,42 @@ export function Sidebar({
   userEmail: string;
   onSignOut: () => void;
   backfillingCovers?: boolean;
+  open?: boolean;
+  onClose?: () => void;
 }) {
+  function handleNav(f: NavFilter) {
+    onNavFilter(f);
+    onClose?.();
+  }
+
   return (
-    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[260px] shrink-0 flex-col overflow-y-auto border-r border-border bg-surface transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
       <div className="border-b border-border px-6 pb-5 pt-7">
-        <h1 className="font-serif text-[22px] tracking-[-0.3px] text-text-1">Bibliotheca</h1>
-        <p className="mt-0.5 text-xs text-text-3">Personal book library</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="font-serif text-[22px] tracking-[-0.3px] text-text-1">Bibliotheca</h1>
+            <p className="mt-0.5 text-xs text-text-3">Personal book library</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg text-text-2 transition hover:bg-surface-3 md:hidden"
+          >
+            ×
+          </button>
+        </div>
         {backfillingCovers && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-text-4">
             <span className="spinner" />
@@ -55,21 +87,21 @@ export function Sidebar({
           icon="📚"
           label="All Books"
           count={stats.total}
-          onClick={() => onNavFilter("all")}
+          onClick={() => handleNav("all")}
         />
         <NavItem
           active={navFilter === "starred"}
           icon="⭐"
           label="Starred"
           count={stats.starred}
-          onClick={() => onNavFilter("starred")}
+          onClick={() => handleNav("starred")}
         />
         <NavItem
           active={navFilter === "owned"}
           icon="📦"
           label="Owned (Physical)"
           count={stats.owned}
-          onClick={() => onNavFilter("owned")}
+          onClick={() => handleNav("owned")}
         />
 
         <div className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wide text-text-4">
@@ -82,7 +114,7 @@ export function Sidebar({
             icon={catEmoji(c.id)}
             label={c.name}
             count={categoryCounts[c.id] ?? 0}
-            onClick={() => onNavFilter(c.id)}
+            onClick={() => handleNav(c.id)}
           />
         ))}
       </nav>
@@ -107,7 +139,8 @@ export function Sidebar({
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

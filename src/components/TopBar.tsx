@@ -8,18 +8,32 @@ export function TopBar({
   onExport,
   onImportFile,
   onAddBook,
+  onToggleSidebar,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
   onExport: () => void;
   onImportFile: (file: File) => void;
   onAddBook: () => void;
+  onToggleSidebar: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-4 border-b border-border bg-surface px-8 py-4">
-      <div className="relative max-w-[480px] flex-1">
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface px-4 py-3 md:gap-4 md:px-8 md:py-4">
+      <button
+        onClick={onToggleSidebar}
+        aria-label="Toggle menu"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-text-2 transition hover:bg-surface-2 md:hidden"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[18px] w-[18px]">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+      </button>
+
+      <div className="relative min-w-0 max-w-[480px] flex-1">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -39,30 +53,30 @@ export function TopBar({
         />
       </div>
 
-      <div className="ml-auto flex gap-2.5">
+      <div className="ml-auto flex shrink-0 gap-1.5 md:gap-2.5">
         <button
           onClick={onExport}
           title="Export library as JSON backup"
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-4 py-2 text-sm font-medium text-text-2 transition hover:bg-surface-2 hover:text-text-1"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-2 text-sm font-medium text-text-2 transition hover:bg-surface-2 hover:text-text-1 md:px-4"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px] shrink-0">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          Export
+          <span className="hidden sm:inline">Export</span>
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
           title="Import library from JSON backup"
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-4 py-2 text-sm font-medium text-text-2 transition hover:bg-surface-2 hover:text-text-1"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2.5 py-2 text-sm font-medium text-text-2 transition hover:bg-surface-2 hover:text-text-1 md:px-4"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px] shrink-0">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          Import
+          <span className="hidden sm:inline">Import</span>
         </button>
         <input
           ref={fileInputRef}
@@ -77,12 +91,12 @@ export function TopBar({
         />
         <button
           onClick={onAddBook}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-text-1 px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2d2c2a]"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-text-1 px-2.5 py-2 text-sm font-medium text-white transition hover:bg-[#2d2c2a] md:px-4"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[15px] w-[15px] shrink-0">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Add Book
+          <span className="hidden sm:inline">Add Book</span>
         </button>
       </div>
     </div>

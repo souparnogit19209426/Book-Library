@@ -39,6 +39,7 @@ export function LibraryApp({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailBook, setDetailBook] = useState<Book | null>(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [backfillingCovers, setBackfillingCovers] = useState(false);
   const backfillStarted = useRef(false);
 
@@ -218,6 +219,8 @@ export function LibraryApp({
         userEmail={userEmail}
         onSignOut={() => signOutAction()}
         backfillingCovers={backfillingCovers}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -227,11 +230,12 @@ export function LibraryApp({
           onExport={handleExport}
           onImportFile={handleImportFile}
           onAddBook={() => setAddModalOpen(true)}
+          onToggleSidebar={() => setSidebarOpen((v) => !v)}
         />
 
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 md:p-8">
           <div className="mb-6">
-            <div className="font-serif text-[28px] tracking-[-0.5px] text-text-1">{pageTitle}</div>
+            <div className="font-serif text-2xl tracking-[-0.5px] text-text-1 md:text-[28px]">{pageTitle}</div>
             <div className="mt-1 text-sm text-text-3">{pageSubtitle}</div>
           </div>
 
