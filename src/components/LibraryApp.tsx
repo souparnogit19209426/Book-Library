@@ -8,8 +8,10 @@ import {
   deleteBookAction,
   deleteCategoryAction,
   importLibraryAction,
+  removeBookCoverAction,
   signOutAction,
   updateBookAction,
+  uploadBookCoverAction,
 } from "@/app/actions";
 import { AddBookModal, type NewBookInput } from "@/components/AddBookModal";
 import { BookCard } from "@/components/BookCard";
@@ -151,6 +153,24 @@ export function LibraryApp({
     setDetailBook(null);
   }
 
+  async function handleUploadCover(id: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await uploadBookCoverAction(id, formData);
+    if (!res.ok) return res.error;
+    const updated = res.data;
+    setBooks((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    setDetailBook((prev) => (prev && prev.id === id ? updated : prev));
+  }
+
+  async function handleRemoveCover(id: string) {
+    const res = await removeBookCoverAction(id);
+    if (!res.ok) return res.error;
+    const updated = res.data;
+    setBooks((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    setDetailBook((prev) => (prev && prev.id === id ? updated : prev));
+  }
+
   async function handleAddCategory(name: string) {
     const res = await addCategoryAction(name);
     if (!res.ok) return res.error;
@@ -289,6 +309,8 @@ export function LibraryApp({
         onSave={handleSaveBook}
         onDelete={handleDeleteBook}
         onStatusChange={handleQuickStatusChange}
+        onUploadCover={handleUploadCover}
+        onRemoveCover={handleRemoveCover}
       />
 
       <CategoryModal

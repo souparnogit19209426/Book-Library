@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CoverThumb } from "@/components/CoverThumb";
 import { Modal } from "@/components/Modal";
 import { STATUS_LABELS, STATUSES, bookColor } from "@/lib/constants";
@@ -20,6 +20,8 @@ export function BookDetailModal({
   onSave,
   onDelete,
   onStatusChange,
+  onUploadCover,
+  onRemoveCover,
 }: {
   book: Book | null;
   categories: Category[];
@@ -27,6 +29,8 @@ export function BookDetailModal({
   onSave: (id: string, patch: Partial<Book>) => Promise<string | void>;
   onDelete: (id: string) => Promise<string | void>;
   onStatusChange: (id: string, status: BookStatus) => void;
+  onUploadCover: (id: string, file: File) => Promise<string | void>;
+  onRemoveCover: (id: string) => Promise<string | void>;
 }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -38,6 +42,8 @@ export function BookDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (book) {
@@ -84,11 +90,32 @@ export function BookDetailModal({
     if (err) setError(err);
   }
 
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !book) return;
+    setUploadingCover(true);
+    setError(null);
+    const err = await onUploadCover(book.id, file);
+    setUploadingCover(false);
+    if (err) setError(err);
+  }
+
+  async function handleRemoveCover() {
+    if (!book) return;
+    setUploadingCover(true);
+    setError(null);
+    const err = await onRemoveCover(book.id);
+    setUploadingCover(false);
+    if (err) setError(err);
+  }
+
   return (
     <Modal open={!!book} onClose={onClose} title="Book Details" maxWidthClassName="max-w-[440px]">
       <div className="mb-5 flex gap-5">
-        <div className="shrink-0">
+        <div className="relative shrink-0">
           <CoverThumb
+            coverUrl={book.coverUrl}
             coverId={book.coverId}
             categoryId={categoryId}
             background={bookColor(book.id)}
@@ -96,6 +123,22 @@ export function BookDetailModal({
             widthClassName="w-20"
             heightClassName="h-28"
             emojiTextClassName="text-3xl"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingCover}
+            title="Upload or take a cover photo"
+            className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs shadow-sm transition hover:bg-surface-2 disabled:opacity-60"
+          >
+            {uploadingCover ? <span className="spinner" /> : "📷"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelected}
           />
         </div>
         <div className="flex-1">
@@ -113,6 +156,16 @@ export function BookDetailModal({
               </span>
             )}
           </div>
+          {book.coverUrl && (
+            <button
+              type="button"
+              onClick={handleRemoveCover}
+              disabled={uploadingCover}
+              className="mt-2.5 text-[11px] text-text-4 underline underline-offset-2 transition hover:text-red-600 disabled:opacity-60"
+            >
+              Remove uploaded cover
+            </button>
+          )}
         </div>
       </div>
 

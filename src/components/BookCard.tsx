@@ -24,6 +24,7 @@ export function BookCard({ book, onClick }: { book: Book; onClick: () => void })
     >
       <div className="relative aspect-[2/3] w-full bg-surface-2">
         <CoverThumb
+          coverUrl={book.coverUrl}
           coverId={book.coverId}
           categoryId={book.categoryId}
           background={bookColor(book.id)}

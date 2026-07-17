@@ -15,6 +15,7 @@ export interface Book {
   owned: boolean;
   note: string;
   coverId: number | null;
+  coverUrl: string | null;
 }
 
 export interface LibraryExport {

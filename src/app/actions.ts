@@ -35,6 +35,7 @@ function rowToBook(row: {
   owned: boolean;
   note: string;
   cover_id: number | null;
+  cover_url: string | null;
 }): Book {
   return {
     id: row.id,
@@ -46,8 +47,19 @@ function rowToBook(row: {
     owned: row.owned,
     note: row.note,
     coverId: row.cover_id,
+    coverUrl: row.cover_url,
   };
 }
+
+const MAX_COVER_BYTES = 8 * 1024 * 1024;
+const EXT_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/heic": "heic",
+  "image/heif": "heif",
+};
 
 export async function signOutAction() {
   const supabase = await createClient();
@@ -212,6 +224,61 @@ export async function updateBookAction(
     return ok(rowToBook(data));
   } catch (err) {
     return fail(err, "Failed to update book");
+  }
+}
+
+export async function uploadBookCoverAction(
+  bookId: string,
+  formData: FormData,
+): Promise<ActionResult<Book>> {
+  try {
+    const { supabase, userId } = await requireUser();
+
+    const file = formData.get("file");
+    if (!(file instanceof File)) throw new Error("No file provided");
+    if (!file.type.startsWith("image/")) throw new Error("Please choose an image file");
+    if (file.size > MAX_COVER_BYTES) throw new Error("Image is too large (max 8MB)");
+
+    const ext = EXT_BY_MIME[file.type] ?? file.name.split(".").pop() ?? "jpg";
+    const path = `${userId}/${bookId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("book-covers")
+      .upload(path, file, { contentType: file.type, upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from("book-covers").getPublicUrl(path);
+    const coverUrl = `${pub.publicUrl}?v=${Date.now()}`;
+
+    const { data, error } = await supabase
+      .from("books")
+      .update({ cover_url: coverUrl })
+      .eq("id", bookId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw error;
+
+    return ok(rowToBook(data));
+  } catch (err) {
+    return fail(err, "Failed to upload cover");
+  }
+}
+
+export async function removeBookCoverAction(bookId: string): Promise<ActionResult<Book>> {
+  try {
+    const { supabase, userId } = await requireUser();
+    const { data, error } = await supabase
+      .from("books")
+      .update({ cover_url: null })
+      .eq("id", bookId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return ok(rowToBook(data));
+  } catch (err) {
+    return fail(err, "Failed to remove cover");
   }
 }
 

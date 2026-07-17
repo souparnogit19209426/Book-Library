@@ -42,6 +42,7 @@ export interface Database {
           owned: boolean;
           note: string;
           cover_id: number | null;
+          cover_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -56,6 +57,7 @@ export interface Database {
           owned?: boolean;
           note?: string;
           cover_id?: number | null;
+          cover_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +72,7 @@ export interface Database {
           owned?: boolean;
           note?: string;
           cover_id?: number | null;
+          cover_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
